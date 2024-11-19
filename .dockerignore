@@ -4,6 +4,7 @@ docker-compose.yml
 **/.env*
 tmp
 .git
+.github
 
 # dev
 bot-center
