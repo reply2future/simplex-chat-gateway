@@ -1,0 +1,7 @@
+.env
+.vscode
+**/.env
+bot-center/node_modules
+bot-center/dist
+tmp
+**/.DS_Store

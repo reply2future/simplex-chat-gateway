@@ -1,0 +1,51 @@
+x-common-log-conf: &common_log_conf
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: 3
+
+services:
+  gateway:
+    container_name: simplex-chat-gateway
+    image: feimeizhan/simplex-chat-gateway:deploy
+    build:
+      dockerfile: Dockerfile
+    command:
+      - --database=${DEVICE_NAME}
+      - --device-name=${DEVICE_NAME}
+      - --display-name=${DISPLAY_NAME}
+      - --chat-server-port=${WS_PORT}
+      - --server=${SMP_SERVER}
+      - --xftp-server=${XFTP_SERVER}
+      - --files-folder=/files
+      - --log-level=debug
+      - --log-file=/files/test.log
+      - -y
+    volumes:
+      - ./tmp/db:/db
+      - ./tmp/files:/files
+    restart: unless-stopped
+    network_mode: host # it must be that value cause of [this](https://github.com/simplex-chat/simplexmq/pull/1280)
+    <<: *common_log_conf
+  # examples
+  bot-center:
+    container_name: bot-center
+    image: feimeizhan/bot-center
+    build:
+      context: ./bot-center
+    environment:
+      - GATEWAY_PORT=${WS_PORT}
+    volumes:
+      - ./tmp/bot-center:/app/data
+    restart: unless-stopped
+    network_mode: host # it must be that value cause of [this](https://github.com/simplex-chat/simplexmq/pull/1280)
+    <<: *common_log_conf
+  # only for test
+  # netshoot:
+  #   image: nicolaka/netshoot
+  #   container_name: netshoot
+  #   depends_on:
+  #     - gateway
+  #   command: ["websocat", "ws://127.0.0.1:6793"] # it must be `127.0.0.1` cause of [this](https://github.com/simplex-chat/simplexmq/pull/1280)
+  #   network_mode: service:gateway

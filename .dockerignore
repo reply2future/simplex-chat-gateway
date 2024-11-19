@@ -1,0 +1,9 @@
+.vscode
+docker-compose.yml
+.env*
+**/.env*
+tmp
+.git
+
+# dev
+bot-center
