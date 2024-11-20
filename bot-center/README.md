@@ -5,6 +5,7 @@
 
 ## API
 
+Server api define in `server.ts` file
 1. health check
 2. inviate user to join a group
 3. send a message to the group.
