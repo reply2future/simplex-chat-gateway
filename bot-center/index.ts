@@ -1,10 +1,18 @@
 import { ChatType } from '@reply2future/simplex-chat/dist/command.js'
-import { ciContentText, ChatInfoType, GroupMemberStatus } from '@reply2future/simplex-chat/dist/response.js'
-import { ChatClient } from "@reply2future/simplex-chat";
+import { ciContentText, ChatInfoType, GroupMemberStatus, ChatResponse } from '@reply2future/simplex-chat/dist/response.js'
+import { ChatClient } from '@reply2future/simplex-chat'
 import { startServer } from './server'
 import { getCurrentUser, getSimplexChatClient } from './client'
+import { Hanlders } from './handlers'
+import { parseCommand } from './handlers/handler'
 
 main()
+  .then(() => {
+    console.log('Main process started!')
+  })
+  .catch((e) => {
+    console.error('Main process crashed!', e)
+  })
 
 const GROUPS = [
   {
@@ -17,17 +25,16 @@ const GROUPS = [
   }
 ]
 
-async function initGroups (chat: ChatClient, { userId, localDisplayName }: { userId: number, localDisplayName: string }) {
-
+async function initGroups (chat: ChatClient, { userId, localDisplayName }: { userId: number, localDisplayName: string }): Promise<void> {
   const allGroups = await chat.apiListGroups(userId)
   const filterGroups = allGroups.filter((v) =>
     ![GroupMemberStatus.Left, GroupMemberStatus.Deleted, GroupMemberStatus.Removed].includes(v.membership.memberStatus)
-  );
+  )
 
   for (const { prefixName, icon } of GROUPS) {
     const _groupName = `${prefixName}#${userId}`
     const _existGroup = filterGroups.find(({ groupProfile }) => groupProfile.displayName === _groupName)
-    if (_existGroup) {
+    if (_existGroup != null) {
       console.log(`group already exists: groupName - ${_groupName}, groupId - ${_existGroup.groupId}`)
       continue
     }
@@ -47,7 +54,7 @@ async function initGroups (chat: ChatClient, { userId, localDisplayName }: { use
   }
 }
 
-async function main () {
+async function main (): Promise<void> {
   const chat = await getSimplexChatClient()
   const user = await getCurrentUser()
 
@@ -61,9 +68,9 @@ async function main () {
   await startServer(chat)
   await processMessages(chat)
 
-  async function processMessages (chat: ChatClient) {
+  async function processMessages (chat: ChatClient): Promise<void> {
     for await (const r of chat.msgQ) {
-      const resp = r instanceof Promise ? await r : r
+      const resp: ChatResponse = r instanceof Promise ? await r : r
       switch (resp.type) {
         case 'contactConnected': {
           // sends welcome message when the new contact is connected
@@ -72,31 +79,49 @@ async function main () {
           await chat.apiSendTextMessage(
             ChatType.Direct,
             contact.contactId,
-            'Hello! I am a notification bot'
+            `Hello! I am a notification bot, and your contact_id is ${contact.contactId}`
           )
           break
         }
         case 'newChatItems': {
-          // TODO: deal with predefined messages
-          // calculates the square of the number and sends the reply
+          // deal with predefined messages
           for (const { chatInfo, chatItem } of resp.chatItems) {
-            if (chatInfo.type !== ChatInfoType.Direct) continue
             const msg = ciContentText(chatItem.content)
-            if (msg) {
-              const n = +msg
-              const reply = typeof n === 'number' && !isNaN(n) ? `${n} * ${n} = ${n * n}` : 'this is not a number'
-              await chat.apiSendTextMessage(ChatType.Direct, chatInfo.contact.contactId, reply)
+            if (msg == null) continue
+
+            const { cmd, param } = parseCommand(msg)
+            switch (chatInfo.type) {
+              case ChatInfoType.Direct: {
+                const result = await Hanlders.direct.get(cmd)?.run(param) ?? `unsupport command /${cmd}`
+                await chat.apiSendTextMessage(
+                  ChatType.Direct,
+                  chatInfo.contact.contactId,
+                  result
+                )
+                break
+              }
+              case ChatInfoType.Group: {
+                const result = await Hanlders.group.get(cmd)?.run(param) ?? `unsupport command /${cmd}`
+                await chat.apiSendTextMessage(
+                  ChatType.Group,
+                  chatInfo.groupInfo.groupId,
+                  result
+                )
+                break
+              }
+              default:
+                break
             }
           }
           break
         }
-        case 'receivedGroupInvitation': {
-          // accept the invitation
-          const groupId = resp.groupInfo.groupId
-          await chat.apiJoinGroup(groupId)
-          console.log(`accepted group invitation: ${groupId}`)
-          break
-        }
+        // case 'receivedGroupInvitation': {
+        //   // accept the invitation
+        //   const groupId = resp.groupInfo.groupId
+        //   await chat.apiJoinGroup(groupId)
+        //   console.log(`accepted group invitation: ${groupId}`)
+        //   break
+        // }
       }
     }
   }

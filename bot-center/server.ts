@@ -38,48 +38,48 @@ fastify.get(
 
 // invite a user to the group
 fastify.post<{
-  Body: { group_id: number; role: GroupMemberRole };
-  Params: { contact_id: number };
+  Body: { group_id: number, role: GroupMemberRole }
+  Params: { contact_id: number }
 }>(
-  "/invite/:contact_id",
+  '/invite/:contact_id',
   {
     schema: {
       params: {
-        type: "object",
+        type: 'object',
         properties: {
           contact_id: {
-            type: "number",
-          },
-        },
+            type: 'number'
+          }
+        }
       },
       body: {
-        type: "object",
-        required: ["group_id"],
+        type: 'object',
+        required: ['group_id'],
         properties: {
           group_id: {
-            type: "number",
+            type: 'number'
           },
           role: {
-            type: "string",
-            enum: [GroupMemberRole.GRAdmin, GroupMemberRole.GRMember],
-          },
-        },
-      },
-    },
+            type: 'string',
+            enum: [GroupMemberRole.GRAdmin, GroupMemberRole.GRMember]
+          }
+        }
+      }
+    }
   },
   async (request, reply) => {
     await _simplexClient.apiAddMember(
       request.body.group_id,
       request.params.contact_id,
-      request.body.role || GroupMemberRole.GRMember
-    );
+      request.body.role ?? GroupMemberRole.GRMember
+    )
 
     return {
-      status: "success",
-      message: "Please confirm the invitation in your account.",
-    };
+      status: 'success',
+      message: 'Please confirm the invitation in your account.'
+    }
   }
-);
+)
 
 // webhook for notification
 fastify.post<{ Body: { message: string }, Params: { group_id: number } }>(
@@ -116,19 +116,23 @@ fastify.post<{ Body: { message: string }, Params: { group_id: number } }>(
 )
 
 // Error handler
-fastify.setErrorHandler((error, request, reply) => {
-  const statusCode = error.statusCode || 500
-  reply.status(statusCode).send({
+fastify.setErrorHandler(async (error, request, reply) => {
+  const statusCode = error.statusCode ?? 500
+  await reply.status(statusCode).send({
     error: error.name,
     message: error.message,
     statusCode
   })
 })
 
-export async function startServer (simplexClient: ChatClient) {
+function _getServerPort (): number {
+  return process.env.SERVER_PORT != null ? +process.env.SERVER_PORT : 6794
+}
+
+export async function startServer (simplexClient: ChatClient): Promise<void> {
   try {
     _simplexClient = simplexClient
-    await fastify.listen({ port: process.env.SERVER_PORT != null ? +process.env.SERVER_PORT : 6794, host: '0.0.0.0' })
+    await fastify.listen({ port: _getServerPort(), host: '0.0.0.0' })
   } catch (err) {
     fastify.log.error(err)
     process.exit(1)
