@@ -27,6 +27,7 @@
   "dependencies": {
     "@fastify/cors": "^10.0.1",
     "@reply2future/simplex-chat": "^0.3.2",
+    "axios": "^1.7.7",
     "fastify": "^5.1.0"
   },
   "devDependencies": {
