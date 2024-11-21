@@ -9,6 +9,8 @@ services:
   gateway:
     container_name: simplex-chat-gateway
     image: feimeizhan/simplex-chat-gateway:latest
+    build:
+      dockerfile: Dockerfile
     command:
       - --database=${DEVICE_NAME}
       - --device-name=${DEVICE_NAME}
@@ -30,6 +32,8 @@ services:
   bot-center:
     container_name: bot-center
     image: feimeizhan/bot-center
+    build:
+      context: ./bot-center
     environment:
       - GATEWAY_PORT=${WS_PORT}
     volumes:
