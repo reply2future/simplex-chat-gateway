@@ -11,6 +11,6 @@ export function parseCommand (rawCmd: string): { cmd: string, param: string } {
 
   return {
     cmd: match[1],
-    param: match[2]
+    param: match[2].trim()
   }
 }
