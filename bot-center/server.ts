@@ -2,6 +2,7 @@ import { GroupMemberRole, ChatType } from '@reply2future/simplex-chat/dist/comma
 import { ChatClient } from '@reply2future/simplex-chat'
 import Fastify from 'fastify'
 import Cors from '@fastify/cors'
+import { getCurrentUserAddress } from './client'
 
 let _simplexClient: ChatClient
 
@@ -33,6 +34,30 @@ fastify.get(
       status: 'ok',
       timestamp: new Date().toISOString()
     }
+  }
+)
+
+// get user address
+fastify.get(
+  '/address',
+  {
+    schema: {
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            address: { type: 'string' }
+          }
+        }
+      }
+    }
+  },
+  async (request, reply) => {
+    const address = await getCurrentUserAddress(_simplexClient)
+    return {
+      status: "success",
+      address,
+    };
   }
 )
 

@@ -3,7 +3,6 @@ import { User } from '@reply2future/simplex-chat/dist/response.js'
 
 let _simplexClient: ChatClient
 let _user: User
-let _userAddress
 
 async function _initSimplexChatClient (): Promise<void> {
   if (_simplexClient != null) return
@@ -15,12 +14,22 @@ async function _initSimplexChatClient (): Promise<void> {
   _user = await _simplexClient.apiGetActiveUser() as User
   if (_user == null) throw new Error('no user profile')
 
-  _userAddress =
-    (await _simplexClient.apiGetUserAddress()) ??
-    (await _simplexClient.apiCreateUserAddress())
+  const _userAddress = await getCurrentUserAddress(_simplexClient)
   console.log(`Bot address: ${_userAddress}`)
   // enables automatic acceptance of contact connections
   await _simplexClient.enableAddressAutoAccept()
+}
+
+export async function getCurrentUserAddress (simplexClient: ChatClient): Promise<string> {
+
+  if (simplexClient == null) {
+    throw new SyntaxError('simplexClient is not initialized')
+  }
+
+  const address =
+    (await simplexClient.apiGetUserAddress()) ??
+    (await simplexClient.apiCreateUserAddress())
+  return address
 }
 
 export async function getCurrentUser (): Promise<User> {
